@@ -130,3 +130,155 @@ Direction string_to_direction(const char *token) {
   }
   return INVALID_DIRECTION;
 }
+
+bool get_symbol_position(char **m, const int height, const int width, const char ch, int &r, int &c) {
+  for (r = 0; r < height; ++r) {
+    for (c = 0; c < width; ++c) {
+      if (m[r][c] == ch)
+        return true;
+    }
+  }
+
+  r = -1;
+  c = -1;
+  return false;
+}
+
+char get_symbol_for_station_or_line(const char *object) {
+  ifstream in;
+
+  char sym;
+  bool found = false;
+  char list_object[MAX_LENGTH];
+
+  in.open("lines.txt");
+  while (!found && in >> sym && in.getline(list_object, MAX_LENGTH)) {
+    if (strcmp(object, list_object+1) == 0)
+      found = true;
+  }
+  in.close();
+
+  in.open("stations.txt");
+  while (!found && in >> sym && in.getline(list_object, MAX_LENGTH)) {
+    if (strcmp(object, list_object+1) == 0)
+      found = true;
+  }
+  in.close();
+
+  if (!found)
+    sym = ' ';
+  
+  return sym;
+}
+
+int validate_route(char **m, const int height, const int width, const char *start_station, char route[MAX_LENGTH], char destination[MAX_LENGTH]) {
+  ifstream in;
+
+  char ch;
+  bool found = false;
+  char list_object[MAX_LENGTH];
+
+  in.open("stations.txt");
+  while (!found && in >> ch && in.getline(list_object, MAX_LENGTH)) {
+    if (strcmp(start_station, list_object+1) == 0)
+      found = true;
+  }
+  in.close();
+
+  if (!found)
+    return ERROR_START_STATION_INVALID;
+
+  int station_count = 0;
+  int r_cur, c_cur, r_next, c_next, r_prev, c_prev;
+  
+  char prev, current, next;
+  current = get_symbol_for_station_or_line(start_station);
+  get_symbol_position(m, height, width, current, r_cur, c_cur);
+
+  Direction directions[128];
+  get_directions(directions, route);
+
+  for (int i = 0; directions[i] != END; ++i) {
+    if (!move_step(m, directions[i], r_cur, c_cur, r_next, c_next))
+      return ERROR_INVALID_DIRECTION;
+
+    if (!valid_coordinates(height, width, r_next, c_next))
+      return ERROR_OUT_OF_BOUNDS;
+
+    if (m[r_next][c_next] == ' ')
+      return ERROR_OFF_TRACK;
+
+    next = m[r_next][c_next];
+
+    if (i > 0 && !isalnum(current) && r_next == r_prev && c_next == c_prev)
+      return ERROR_BACKTRACKING_BETWEEN_STATIONS;
+
+    if (i > 0 && current != next) {
+      if (!isalnum(next) && !isalnum(current)) {
+        return ERROR_LINE_HOPPING_BETWEEN_STATIONS;
+      } else if (isalnum(current)){
+        station_count++;
+      }
+    }
+
+    r_prev = r_cur;
+    c_prev = c_cur;
+    r_cur = r_next;
+    c_cur = c_next;
+    prev = current;
+    current = next;  
+  }
+
+  found = false;
+  in.open("stations.txt");
+  while (!found && in >> ch && in.getline(list_object, MAX_LENGTH)) {
+    if (current == ch) {
+      found = true;
+      strcpy(destination, list_object+1);
+    }
+  }
+  in.close();
+
+  return station_count;
+}
+
+bool move_step(char **m, Direction dir, const int r_cur, const int c_cur, int &r_next, int &c_next) {
+  r_next = r_cur;
+  c_next = c_cur;
+  
+  switch (dir) {
+    case N: --r_next; break;
+    case E: ++c_next; break;
+    case S: ++r_next; break;
+    case W: --c_next; break;
+    case NE: --r_next; ++c_next; break;
+    case NW: --r_next; --c_next; break;
+    case SE: ++r_next; ++c_next; break;
+    case SW: ++r_next; --c_next; break;
+    case INVALID_DIRECTION: return false;
+  }
+
+  return true;
+}
+
+bool valid_coordinates(const int height, const int width, const int r, const int c) {
+  return r >= 0 && r < height && c >= 0 && c < width;
+}
+
+void get_directions(Direction *directions, const char *route) {
+  int d_i = 0;
+  for (int i = 0; route[i] != '\0'; i += 2) {
+    char dir_str[2] = {route[i], '\0'};
+
+    if (route[i+1] != ',' && route[i+1] != '\0') {
+      dir_str[1] = route[i+1];
+      ++i;
+    }
+
+    Direction dir = string_to_direction(dir_str);
+    directions[d_i] = dir;
+    ++d_i;
+  }
+
+  directions[d_i] = END;
+}

@@ -1,4 +1,4 @@
-enum Direction {N, S, W, E, NE, NW, SE, SW, INVALID_DIRECTION};
+enum Direction {N, S, W, E, NE, NW, SE, SW, END, INVALID_DIRECTION};
 
 /* error codes for Question 3 */
 #define ERROR_START_STATION_INVALID -1 
@@ -8,6 +8,8 @@ enum Direction {N, S, W, E, NE, NW, SE, SW, INVALID_DIRECTION};
 #define ERROR_INVALID_DIRECTION -5
 #define ERROR_OFF_TRACK -6
 #define ERROR_OUT_OF_BOUNDS -7
+
+const int MAX_LENGTH = 512;
 
 /* pre-supplied function to load a tube map from a file*/
 char **load_map(const char *filename, int &height, int &width);
@@ -21,3 +23,14 @@ const char *error_description(int code);
 /* presupplied helper function for converting string to Direction enum */
 Direction string_to_direction(const char *token);
 
+bool get_symbol_position(char **m, const int height, const int width, const char ch, int &r, int &c);
+
+char get_symbol_for_station_or_line(const char *object);
+
+int validate_route(char **m, const int height, const int width, const char *start_station, char route[MAX_LENGTH], char destination[MAX_LENGTH]);
+
+void get_directions(Direction *directions, const char *route);
+
+bool move_step(char **m, Direction dir, const int r_cur, const int c_cur, int &r_next, int &c_next);
+
+bool valid_coordinates(const int height, const int width, const int r, const int c);
